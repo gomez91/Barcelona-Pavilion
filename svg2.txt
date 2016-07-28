@@ -1,0 +1,189 @@
+
+#
+#	Nome: 		Antonio Gómez Lucas
+#	Project: 	Barcelona Pavilion
+#	Subject: 	Grafica Computazionale
+#	Data: 		28/08/2016
+#
+
+from larlib import *
+
+scala=1.2
+misuraMuro=8
+misuraTerra=8
+misuraTettoSinistra=9
+misuraTettoDestra=23
+misuraAltezza=3
+
+#filenameMuro = "piano-muro-conFinestre.svg"
+filenameMuro = "piano-muro-senzaFinestre.svg"
+filenameFloor = "piano-terra.svg"
+filenameRoof = "piano-tetto.svg"
+linesMuro = svg2lines(filenameMuro)
+LinesFloor = svg2lines(filenameFloor)
+LinesRoof = svg2lines(filenameRoof)
+#LinesRoof = lines2lines("LinesRoof.lines")
+V2,FV2,EV2,polygons2 = larFromLines(LinesRoof)
+V1,FV1,EV1,polygons1 = larFromLines(LinesFloor)
+upLevel = STRUCT(AA(POLYLINE)(linesMuro))
+V3,EV3 = lines2lar(linesMuro)
+submodel1 = STRUCT(MKPOLS((V1,EV1)))
+VV1 = AA(LIST)(range(len(V1)))
+submodel2 = STRUCT(MKPOLS((V2,EV2)))
+VV2 = AA(LIST)(range(len(V2)))
+submodel3 = STRUCT(MKPOLS((V3,EV3)))
+VV3 = AA(LIST)(range(len(V3)))
+
+#VIEW(larModelNumbering(1,1,1)(V1,[VV1,EV1,FV1],submodel1,100))
+#VIEW(larModelNumbering(1,1,1)(V2,[VV2,EV2,FV2],submodel2,100))
+#VIEW(larModelNumbering(1,1,1)(V3,[VV3,EV3],submodel3,50))
+
+
+#
+
+#suelo
+V1,EV1 = lines2lar(LinesFloor,normalize=True)
+VV1 = AA(LIST)(range(len(V1)))
+submodel1 = STRUCT(MKPOLS((V1,EV1)))
+
+#techo
+V2,EV2 = lines2lar(LinesRoof,normalize=True)
+VV2 = AA(LIST)(range(len(V2)))
+submodel2 = STRUCT(MKPOLS((V2,EV2)))
+
+#muro
+V3,EV3 = lines2lar(linesMuro,normalize=True)
+VV3 = AA(LIST)(range(len(V3)))
+submodel3 = STRUCT(MKPOLS((V3,EV3)))
+
+#VIEW(larModelNumbering(1,1,1)(V1,[VV1,EV1,FV1],submodel1,0.2))
+#VIEW(larModelNumbering(1,1,1)(V2,[VV2,EV2,FV2],submodel2,0.2))
+#VIEW(larModelNumbering(1,1,1)(V3,[VV3,EV3],submodel3,0.1))
+
+
+#VIEW(STRUCT([submodel1,submodel2,submodel3]))
+
+#Scalare tutto
+
+#terra
+delta_x_basement1 = (misuraTerra*scala)/(V1[5][0]-V1[4][0])
+W1 = SCALARMATPROD([delta_x_basement1,V1])
+W1 = ((mat(V1) - V1[4]) * delta_x_basement1).tolist()
+VV1 = AA(LIST)(range(len(W1)))
+submodel1 = STRUCT(MKPOLS((W1,EV1)))
+
+#tetto
+delta_x_basement2 = (misuraTettoDestra*scala)/(V2[7][0]-V2[1][0])
+W2 = SCALARMATPROD([delta_x_basement2,V2])
+W2 = ((mat(V2) - V2[6]) * delta_x_basement2).tolist()
+VV2 = AA(LIST)(range(len(W2)))
+submodel2 = STRUCT(MKPOLS((W2,EV2)))
+
+#muro
+#delta_x_basement3 = (misuraMuro*scala)/(V3[2][0]-V3[24][0])
+delta_x_basement3 = (misuraMuro*scala)/(V3[72][0]-V3[90][0])
+W3 = SCALARMATPROD([delta_x_basement3,V3])
+#W3 = ((mat(V3) - V3[24]) * delta_x_basement3).tolist()
+W3 = ((mat(V3) - V3[90]) * delta_x_basement3).tolist()
+VV3 = AA(LIST)(range(len(W3)))
+submodel3 = STRUCT(MKPOLS((W3,EV3)))
+
+#VIEW(STRUCT([submodel1,submodel2,submodel3]))
+
+submodel1 = OFFSET([.3,.3])(submodel1)
+#submodel2 = OFFSET([.3,.3])(submodel2)
+submodel3 = OFFSET([.3,.3])(submodel3)
+
+#Alungare gli muri
+
+h = misuraAltezza*scala
+H = INTERVALS(h)(1)
+
+upWalls = PROD([ submodel3, H ])
+
+#VIEW(STRUCT([submodel1,submodel2,upWalls]))
+
+#Fare la terra piana
+
+floor2 = MKTRIANGLES((W1,FV1,EV1))
+lowFloor = PROD([ PROJECT(1)(STRUCT(floor2)), INTERVALS(.3/24)(1) ])
+
+#VIEW(STRUCT([lowFloor,submodel2,upWalls]))
+
+#Alzare il tetto
+
+#W2 = [AR([W2[k],h]) for k in range(len(W2))]
+
+#submodel2 = STRUCT(MKPOLS((W2,EV2)))
+
+#VIEW(STRUCT([lowFloor,submodel2,upWalls]))
+
+##Creare gli due tetti per separato
+
+
+filenameRoof1 = "piano-tetto-sinistra.svg"
+filenameRoof2 = "piano-tetto-destra.svg"
+LinesRoof1 = svg2lines(filenameRoof1)
+V21,FV21,EV21,polygons21 = larFromLines(LinesRoof1)
+LinesRoof2 = svg2lines(filenameRoof2)
+V22,FV22,EV22,polygons22 = larFromLines(LinesRoof2)
+submodel21 = STRUCT(MKPOLS((V21,EV21)))
+VV21 = AA(LIST)(range(len(V21)))
+submodel22 = STRUCT(MKPOLS((V22,EV22)))
+VV22 = AA(LIST)(range(len(V22)))
+#VIEW(larModelNumbering(1,1,1)(V21,[VV21,EV21,FV21],submodel21,0.2))
+#VIEW(larModelNumbering(1,1,1)(V22,[VV22,EV22,FV22],submodel22,0.2))
+
+delta_x_basement21 = (9*scala)/(V21[2][0]-V21[0][0])
+W21 = SCALARMATPROD([delta_x_basement21,V21])
+W21 = ((mat(V21) - V21[1]) * delta_x_basement21).tolist()
+VV21 = AA(LIST)(range(len(W21)))
+submodel21 = STRUCT(MKPOLS((W21,EV21)))
+
+delta_x_basement22 = (23*scala)/(V22[1][0]-V22[0][0])
+W22 = SCALARMATPROD([delta_x_basement22,V22])
+W22 = ((mat(V22) - V22[0]) * delta_x_basement22).tolist()
+VV22 = AA(LIST)(range(len(W22)))
+submodel22 = STRUCT(MKPOLS((W22,EV22)))
+
+W22 = [SUM([W22[k],W2[1]]) for k in range(len(W22))]
+submodel22 = STRUCT(MKPOLS((W22,EV22)))
+
+W21 = [AR([W21[k],h]) for k in range(len(W21))]
+submodel21 = STRUCT(MKTRIANGLES((W21,FV21,EV21)))
+
+W22 = [AR([W22[k],h]) for k in range(len(W22))]
+submodel22 = STRUCT(MKTRIANGLES((W22,FV22,EV22)))
+
+#floor31 = MKTRIANGLES((W21,FV21,EV21))
+#lowFloor21 = PROD([ PROJECT(1)(STRUCT(floor31)), INTERVALS(.3/24)(1) ])
+#floor32 = MKTRIANGLES((W22,FV22,EV22))
+#lowFloor22 = PROD([ PROJECT(1)(STRUCT(floor32)), INTERVALS(.3/24)(1) ])
+
+#W21 = [AR([W21[k],h]) for k in range(len(W21))]
+#submodel21 = STRUCT(MKPOLS((W21,EV21)))
+
+#W22 = [AR([W22[k],h]) for k in range(len(W22))]
+#submodel22 = STRUCT(MKPOLS((W22,EV22)))
+
+
+VIEW(STRUCT([lowFloor,submodel21,submodel22,upWalls]))
+
+
+#Per dare spessore al tetto
+
+#h2 = 0.1*scala
+#H2 = INTERVALS(h2)(1)
+
+#upRoof1 = PROD([ submodel21, H2 ])
+#upRoof2 = PROD([ submodel22, H2 ])
+
+#VIEW(STRUCT([lowFloor,upRoof1,upRoof2,upWalls]))
+
+s = R([2,3])(pi/2*3)(STRUCT([lowFloor,submodel21,submodel22,upWalls]))
+
+b=Plasm.getBatches(s)
+Batch.saveObj("fin270.obj",b)
+
+
+
